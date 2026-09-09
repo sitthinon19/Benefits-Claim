@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Benefits Claim</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;font-family:Arial,"Noto Sans Thai",sans-serif;color:#222}.container{max-width:680px;margin:0 auto;padding:14px}.card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 3px 16px rgba(0,0,0,.07)}h1{font-size:22px;margin:0 0 5px}.user{font-size:13px;color:#666;margin-bottom:16px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.primary,.secondary{border:0;border-radius:11px;padding:13px 10px;font-weight:700;font-size:15px;cursor:pointer}.primary{background:#111;color:#fff}.secondary{background:#eef0f3;color:#222}.section-title{font-size:16px;font-weight:700;margin:20px 0 10px}.item{border:1px solid #e4e6ea;border-radius:14px;padding:14px;margin-bottom:10px}label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}input,select,textarea{width:100%;padding:12px;border:1px solid #d9dce1;border-radius:10px;background:#fff;font-size:15px}textarea{min-height:90px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.amount{font-size:22px;font-weight:700;text-align:right;margin-top:5px}.small{font-size:12px;color:#777}.hidden{display:none}.message{display:none;margin-top:12px;padding:12px;border-radius:10px;white-space:pre-line}.success{background:#eaf7ee;color:#176b32}.error{background:#fff0f0;color:#a51d1d}.history-card{border:1px solid #e4e6ea;border-radius:14px;padding:13px;margin:9px 0}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#eef0f3;font-size:12px;font-weight:700}.badge.approved{background:#e8f7ed}.badge.rejected{background:#fdeaea}.badge.pending{background:#fff6dd}.receipt{margin-top:7px}.receipt a{font-size:13px}.loading{text-align:center;color:#777;padding:15px}@media(max-width:380px){.container{padding:10px}.card{padding:15px}}
+</style>
+</head>
+<body>
+<div class="container"><div class="card">
+<h1>💳 Benefits Claim</h1>
+<div id="userInfo" class="user">กำลังตรวจสอบ LINE...</div>
+
+<div class="actions" style="margin-bottom:14px">
+<button id="createTabBtn" class="primary">สร้างรายการ</button>
+<button id="historyTabBtn" class="secondary">ประวัติ</button>
+</div>
+
+<div id="createSection">
+<div class="section-title">สร้างรายการขอเบิก</div>
+<div class="item">
+<label for="benefitType">ประเภทสวัสดิการ</label>
+<select id="benefitType">
+<option value="MEAL_ALLOWANCE">เบี้ยเลี้ยงอาหาร (ไปต่างจังหวัด)</option>
+<option value="MEDICAL_EXPENSE">ค่ารักษาพยาบาล</option>
+<option value="BONUS">โบนัส</option>
+<option value="ATTENDANCE_BONUS">เบี้ยขยัน</option>
+<option value="TELEPHONE_ALLOWANCE">ค่าโทรศัพท์</option>
+</select>
+
+<label for="claimDate">วันที่</label>
+<input type="date" id="claimDate">
+
+<label for="amount">จำนวนเงิน (บาท)</label>
+<input type="number" id="amount" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00">
+<div id="amountPreview" class="amount">0.00 บาท</div>
+
+<label for="description">รายละเอียด</label>
+<textarea id="description" placeholder="กรุณาระบุรายละเอียดการขอเบิก"></textarea>
+
+<label for="receipt">แนบเอกสาร / ใบเสร็จ (ถ้ามี)</label>
+<input type="file" id="receipt" accept="image/*,application/pdf">
+<div class="small">รองรับรูปภาพหรือ PDF ขนาดไม่เกิน 8 MB</div>
+
+<button id="submitBtn" class="primary" type="button" style="width:100%;margin-top:14px">ส่งรายการขอเบิก</button>
+</div>
+<div id="message" class="message"></div>
+</div>
+
+<div id="historySection" class="hidden">
+<div class="section-title">ประวัติการขอเบิก</div>
+<button id="refreshHistoryBtn" class="secondary" style="width:100%">รีเฟรชประวัติ</button>
+<div id="history" style="margin-top:8px"></div>
+</div>
+</div></div>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+// ใส่ LIFF ID ของ Benefits Claim ตัวใหม่ของคุณตรงนี้
+const LIFF_ID = '2011333828-CJCO6Azt';
+// ใช้ Web App URL ของ Apps Script ตัวเดียวกับระบบ HR Mini เดิม
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyziwBne15TTHAMQEDZGBBOCVkeMmzQH8nbZPzm_83X9P702Hy4Aq06fa6Ebf9Mj2v21Q/exec';
+let idToken='';
+
+async function initLiff(){
+ try{
+  if(!LIFF_ID || LIFF_ID.indexOf('ใส่_')===0) throw new Error('กรุณาใส่ LIFF_ID ใหม่ของ Benefits Claim ก่อนใช้งาน');
+  await liff.init({liffId:LIFF_ID});
+  if(!liff.isLoggedIn()){liff.login();return;}
+  idToken=liff.getIDToken();
+  const profile=await liff.getProfile();
+  document.getElementById('userInfo').textContent=profile.displayName?'สวัสดี คุณ '+profile.displayName:'กำลังใช้งาน HR Mini';
+  pageInit();
+ }catch(e){showMessage('message',e.message||'ไม่สามารถเริ่มต้น LIFF ได้',false)}
+}
+async function apiCall(payload){
+ const r=await fetch(WEB_APP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+ if(!r.ok)throw new Error('Apps Script API error: HTTP '+r.status); return r.json();
+}
+function showMessage(id,text,ok){const el=document.getElementById(id);if(!el)return;el.style.display='block';el.className='message '+(ok?'success':'error');el.textContent=text}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function setDefaultDate(){const el=document.getElementById('claimDate');if(!el.value)el.value=new Date().toISOString().slice(0,10)}
+function formatMoney(n){return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function updateAmount(){document.getElementById('amountPreview').textContent=formatMoney(document.getElementById('amount').value)+' บาท'}
+function switchTab(tab){
+ const c=document.getElementById('createSection'),h=document.getElementById('historySection');const cb=document.getElementById('createTabBtn'),hb=document.getElementById('historyTabBtn');
+ if(tab==='history'){c.classList.add('hidden');h.classList.remove('hidden');cb.className='secondary';hb.className='primary';loadHistory()}else{h.classList.add('hidden');c.classList.remove('hidden');cb.className='primary';hb.className='secondary'}
+}
+function fileToBase64(file){return new Promise((resolve,reject)=>{if(!file){resolve(null);return}if(file.size>8*1024*1024){reject(new Error('ไฟล์ต้องไม่เกิน 8 MB'));return}const r=new FileReader();r.onload=()=>resolve({base64:r.result,name:file.name,mime:file.type||'application/octet-stream'});r.onerror=()=>reject(new Error('อ่านไฟล์ไม่สำเร็จ'));r.readAsDataURL(file)})}
+async function submitClaim(){
+ const btn=document.getElementById('submitBtn');const type=document.getElementById('benefitType').value,date=document.getElementById('claimDate').value,amount=Number(document.getElementById('amount').value),description=document.getElementById('description').value.trim(),file=document.getElementById('receipt').files[0];
+ if(!date||!amount||amount<=0||!description){showMessage('message','กรุณากรอกวันที่ จำนวนเงิน และรายละเอียดให้ครบถ้วน',false);return}
+ btn.disabled=true;btn.textContent='กำลังส่งรายการ...';
+ try{
+  const f=await fileToBase64(file);
+  const r=await apiCall({action:'submitBenefitsClaim',idToken,claimDate:date,benefitType:type,amount,description,receiptBase64:f?.base64||'',receiptName:f?.name||'',receiptMimeType:f?.mime||''});
+  if(!r.success)throw new Error(r.message||'ส่งรายการไม่สำเร็จ');
+  showMessage('message','ส่งรายการเรียบร้อยแล้ว\nเลขที่: '+r.claimId,true);
+  document.getElementById('amount').value='';document.getElementById('description').value='';document.getElementById('receipt').value='';updateAmount();
+ }catch(e){showMessage('message',e.message||'เกิดข้อผิดพลาด',false)}finally{btn.disabled=false;btn.textContent='ส่งรายการขอเบิก'}
+}
+async function loadHistory(){
+ const box=document.getElementById('history');box.innerHTML='<div class="loading">กำลังโหลด...</div>';
+ try{const r=await apiCall({action:'getBenefitsHistory',idToken});if(!r.success)throw new Error(r.message||'โหลดประวัติไม่สำเร็จ');
+  box.innerHTML=r.items.length?r.items.map(x=>{const st=String(x.status||'');let cls=st=== 'Approved'?'approved':st==='Rejected'?'rejected':'pending';return `<div class="history-card"><div style="font-weight:700">${escapeHtml(x.claimId)}</div><div class="small">วันที่ ${escapeHtml(x.date)} · ${escapeHtml(x.createdAt)}</div><div style="margin-top:7px">${escapeHtml(x.benefitType)}</div><div style="font-size:19px;font-weight:700;margin-top:5px">${formatMoney(x.amount)} บาท</div><div style="margin-top:7px"><span class="badge ${cls}">${escapeHtml(st||'-')}</span></div><div style="margin-top:7px">${escapeHtml(x.description||'')}</div>${x.rejectionReason?`<div class="small" style="margin-top:6px">เหตุผลไม่อนุมัติ: ${escapeHtml(x.rejectionReason)}</div>`:''}${x.receiptUrl?`<div class="receipt"><a href="${escapeHtml(x.receiptUrl)}" target="_blank" rel="noopener">📎 เปิดเอกสารแนบ</a></div>`:''}</div>`}).join(''):'ยังไม่มีประวัติการขอเบิก';
+ }catch(e){box.textContent=e.message||'โหลดประวัติไม่สำเร็จ'}
+}
+function pageInit(){setDefaultDate();document.getElementById('createTabBtn').onclick=()=>switchTab('create');document.getElementById('historyTabBtn').onclick=()=>switchTab('history');document.getElementById('refreshHistoryBtn').onclick=loadHistory;document.getElementById('submitBtn').onclick=submitClaim;document.getElementById('amount').addEventListener('input',updateAmount);updateAmount()}
+window.addEventListener('load',initLiff);
+</script>
+</body>
+</html>
