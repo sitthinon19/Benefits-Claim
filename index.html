@@ -65,7 +65,7 @@ input[type="date"]{
 // ใส่ LIFF ID ของ Benefits Claim ตัวใหม่ของคุณตรงนี้
 const LIFF_ID = '2011333828-CJCO6Azt';
 // ใช้ Web App URL ของ Apps Script ตัวเดียวกับระบบ HR Mini เดิม
-const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzh8rwVq7wKa76iQKN0P_mvfmK3EJ1nFUAsK4oOPIuip6HOZtD4US3WlTofREAGWSQ50w/exec';
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyvXjAtiJE7kz-f12bI9iISaq_GO5VAb_Q1fXeGRyfcZIHrkPGxwh1X3cnBGVrqlHTWFA/exec';
 let idToken='';
 
 async function initLiff(){
@@ -124,7 +124,7 @@ async function submitClaim(){
 async function loadHistory(){
  const box=document.getElementById('history');box.innerHTML='<div class="loading">กำลังโหลด...</div>';
  try{const r=await apiCall({action:'getBenefitsHistory',idToken});if(!r.success)throw new Error(r.message||'โหลดประวัติไม่สำเร็จ');
-  box.innerHTML=r.items.length?r.items.map(x=>{const st=String(x.status||'');let cls=st=== 'Approved'?'approved':st==='Rejected'?'rejected':'pending';return `<div class="history-card"><div style="font-weight:700">${escapeHtml(x.claimId)}</div><div class="small">วันที่ ${escapeHtml(x.date)} · ${escapeHtml(x.createdAt)}</div><div style="margin-top:7px">${escapeHtml(x.benefitType)}</div><div style="font-size:19px;font-weight:700;margin-top:5px">${formatMoney(x.amount)} บาท</div><div style="margin-top:7px"><span class="badge ${cls}">${escapeHtml(st||'-')}</span></div><div style="margin-top:7px">${escapeHtml(x.description||'')}</div>${x.rejectionReason?`<div class="small" style="margin-top:6px">เหตุผลไม่อนุมัติ: ${escapeHtml(x.rejectionReason)}</div>`:''}${x.receiptUrl?`<div class="receipt"><a href="${escapeHtml(x.receiptUrl)}" target="_blank" rel="noopener">📎 เปิดเอกสารแนบ</a></div>`:''}</div>`}).join(''):'ยังไม่มีประวัติการขอเบิก';
+  box.innerHTML=r.items.length?r.items.map(x=>{const st=String(x.status||'');let cls=st==='Approved'?'approved':st==='Rejected'?'rejected':'pending';const statusText={'Pending Level 1':'รออนุมัติ Level 1','Approved':'อนุมัติแล้ว','Rejected':'ไม่อนุมัติ'}[st]||st||'-';return `<div class="history-card"><div style="font-weight:700">${escapeHtml(x.claimId)}</div><div class="small">วันที่ ${escapeHtml(x.date)} · ${escapeHtml(x.createdAt)}</div><div style="margin-top:7px">${escapeHtml(x.benefitType)}</div><div style="font-size:19px;font-weight:700;margin-top:5px">${formatMoney(x.amount)} บาท</div><div style="margin-top:7px"><span class="badge ${cls}">${escapeHtml(statusText)}</span></div><div style="margin-top:7px">${escapeHtml(x.description||'')}</div>${x.rejectionReason?`<div class="small" style="margin-top:6px">เหตุผลไม่อนุมัติ: ${escapeHtml(x.rejectionReason)}</div>`:''}${x.receiptUrl?`<div class="receipt"><a href="${escapeHtml(x.receiptUrl)}" target="_blank" rel="noopener">📎 เปิดเอกสารแนบ</a></div>`:''}</div>`}).join(''):'ยังไม่มีประวัติการขอเบิก';
  }catch(e){box.textContent=e.message||'โหลดประวัติไม่สำเร็จ'}
 }
 async function pageInit(){setDefaultDate();document.getElementById('createTabBtn').onclick=()=>switchTab('create');document.getElementById('historyTabBtn').onclick=()=>switchTab('history');document.getElementById('refreshHistoryBtn').onclick=loadHistory;document.getElementById('submitBtn').onclick=submitClaim;document.getElementById('amount').addEventListener('input',updateAmount);updateAmount();await loadBenefitsTypes()}
