@@ -24,19 +24,6 @@ input[type="date"]{
 <div class="actions" style="margin-bottom:14px">
 <button id="createTabBtn" class="primary">สร้างรายการ</button>
 <button id="historyTabBtn" class="secondary">ประวัติ</button>
-<button id="lineTabBtn" class="secondary">LINE / แจ้งเตือน</button>
-</div>
-
-<div id="lineSection" class="hidden">
-<div class="section-title">ตรวจสอบ LINE / แจ้งเตือน</div>
-<div class="item">
-<button id="diagLineBtn" class="primary" style="width:100%">🔎 ตรวจสอบ LINE Token / UID</button>
-<div id="lineDiag" class="small" style="margin-top:10px;white-space:pre-line"></div>
-</div>
-<div class="item">
-<div style="font-weight:700">รายการแจ้งเตือนที่ส่งไม่สำเร็จ</div>
-<div id="lineFailed" style="margin-top:8px"></div>
-</div>
 </div>
 
 <div id="createSection">
@@ -102,12 +89,8 @@ function setDefaultDate(){const el=document.getElementById('claimDate');if(!el.v
 function formatMoney(n){return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function updateAmount(){document.getElementById('amountPreview').textContent=formatMoney(document.getElementById('amount').value)+' บาท'}
 function switchTab(tab){
- const c=document.getElementById('createSection'),h=document.getElementById('historySection'),l=document.getElementById('lineSection');
- const cb=document.getElementById('createTabBtn'),hb=document.getElementById('historyTabBtn'),lb=document.getElementById('lineTabBtn');
- c.classList.add('hidden');h.classList.add('hidden');l.classList.add('hidden');cb.className='secondary';hb.className='secondary';lb.className='secondary';
- if(tab==='history'){h.classList.remove('hidden');hb.className='primary';loadHistory()}
- else if(tab==='line'){l.classList.remove('hidden');lb.className='primary';loadLineDiagnostics();loadFailedNotifications()}
- else{c.classList.remove('hidden');cb.className='primary'}
+ const c=document.getElementById('createSection'),h=document.getElementById('historySection');const cb=document.getElementById('createTabBtn'),hb=document.getElementById('historyTabBtn');
+ if(tab==='history'){c.classList.add('hidden');h.classList.remove('hidden');cb.className='secondary';hb.className='primary';loadHistory()}else{h.classList.add('hidden');c.classList.remove('hidden');cb.className='primary';hb.className='secondary'}
 }
 async function loadBenefitsTypes(){
  const select=document.getElementById('benefitType');
@@ -144,31 +127,7 @@ async function loadHistory(){
   box.innerHTML=r.items.length?r.items.map(x=>{const st=String(x.status||'');let cls=st==='Approved'?'approved':st==='Rejected'?'rejected':'pending';const statusText={'Pending Level 1':'รออนุมัติ Level 1','Approved':'อนุมัติแล้ว','Rejected':'ไม่อนุมัติ'}[st]||st||'-';return `<div class="history-card"><div style="font-weight:700">${escapeHtml(x.claimId)}</div><div class="small">วันที่ ${escapeHtml(x.date)} · ${escapeHtml(x.createdAt)}</div><div style="margin-top:7px">${escapeHtml(x.benefitType)}</div><div style="font-size:19px;font-weight:700;margin-top:5px">${formatMoney(x.amount)} บาท</div><div style="margin-top:7px"><span class="badge ${cls}">${escapeHtml(statusText)}</span></div><div style="margin-top:7px">${escapeHtml(x.description||'')}</div>${x.rejectionReason?`<div class="small" style="margin-top:6px">เหตุผลไม่อนุมัติ: ${escapeHtml(x.rejectionReason)}</div>`:''}${x.receiptUrl?`<div class="receipt"><a href="${escapeHtml(x.receiptUrl)}" target="_blank" rel="noopener">📎 เปิดเอกสารแนบ</a></div>`:''}</div>`}).join(''):'ยังไม่มีประวัติการขอเบิก';
  }catch(e){box.textContent=e.message||'โหลดประวัติไม่สำเร็จ'}
 }
-async function loadLineDiagnostics(){
- const box=document.getElementById('lineDiag'); box.textContent='กำลังตรวจสอบ...';
- try{const r=await apiCall({action:'getLineDiagnostics',idToken}); if(!r.success)throw new Error(r.message||'ตรวจสอบไม่สำเร็จ');
-  const t=r.token||{},e=r.employee||{},s=r.supervisor1||{};
-  box.textContent='Token: '+(t.valid?'✅ ใช้งานได้':'❌ ใช้ไม่ได้')+'
-'+(t.message||'')+'
-Bot: '+(t.botName||'-')+'
-
-พนักงาน UID: '+(e.lineUid||'-')+' → '+(e.check&&e.check.valid?'✅':'❌')+' '+(e.check&&e.check.detail||e.check&&e.check.message||'')+'
-Supervisor UID: '+(s.lineUid||'-')+' → '+(s.check&&s.check.valid?'✅':'❌')+' '+(s.check&&s.check.detail||s.check&&s.check.message||'');
- }catch(e){box.textContent=e.message||'ตรวจสอบไม่สำเร็จ'}
-}
-async function loadFailedNotifications(){
- const box=document.getElementById('lineFailed');box.innerHTML='<div class="loading">กำลังโหลด...</div>';
- try{const r=await apiCall({action:'getLineNotificationLogs',idToken});if(!r.success)throw new Error(r.message||'โหลด Log ไม่สำเร็จ');
-  if(!r.items.length){box.innerHTML='<div class="small">ไม่มีรายการ LINE ที่ส่งไม่สำเร็จ</div>';return}
-  box.innerHTML=r.items.map(x=>`<div class="history-card"><div style="font-weight:700">${escapeHtml(x.claimId||'-')}</div><div class="small">${escapeHtml(x.notificationType||'-')} · ${escapeHtml(x.lastAttemptAt||'-')}</div><div style="margin-top:6px">HTTP ${escapeHtml(x.httpCode||'-')} · ลองส่ง ${escapeHtml(x.attemptCount||0)} ครั้ง</div><div class="small" style="margin-top:6px;white-space:pre-line">${escapeHtml(x.errorDetail||'-')}</div><button class="secondary retry-line" data-id="${escapeHtml(x.notificationId)}" style="width:100%;margin-top:9px">🔄 ส่ง LINE อีกครั้ง</button></div>`).join('');
-  box.querySelectorAll('.retry-line').forEach(b=>b.onclick=()=>retryNotification(b.dataset.id));
- }catch(e){box.textContent=e.message||'โหลด Log ไม่สำเร็จ'}
-}
-async function retryNotification(notificationId){
- if(!notificationId)return; if(!confirm('ต้องการส่ง LINE รายการนี้อีกครั้งหรือไม่?'))return;
- try{const r=await apiCall({action:'retryLineNotification',idToken,notificationId});if(!r.success)throw new Error(r.message||'Retry ไม่สำเร็จ');alert(r.message||'ส่ง LINE สำเร็จแล้ว');loadFailedNotifications();loadLineDiagnostics();}catch(e){alert(e.message||'Retry ไม่สำเร็จ');}
-}
-async function pageInit(){setDefaultDate();document.getElementById('createTabBtn').onclick=()=>switchTab('create');document.getElementById('historyTabBtn').onclick=()=>switchTab('history');document.getElementById('lineTabBtn').onclick=()=>switchTab('line');document.getElementById('diagLineBtn').onclick=loadLineDiagnostics;document.getElementById('refreshHistoryBtn').onclick=loadHistory;document.getElementById('submitBtn').onclick=submitClaim;document.getElementById('amount').addEventListener('input',updateAmount);updateAmount();await loadBenefitsTypes()}
+async function pageInit(){setDefaultDate();document.getElementById('createTabBtn').onclick=()=>switchTab('create');document.getElementById('historyTabBtn').onclick=()=>switchTab('history');document.getElementById('refreshHistoryBtn').onclick=loadHistory;document.getElementById('submitBtn').onclick=submitClaim;document.getElementById('amount').addEventListener('input',updateAmount);updateAmount();await loadBenefitsTypes()}
 window.addEventListener('load',initLiff);
 </script>
 </body>
